@@ -13,6 +13,7 @@ const DB_PATH = process.env.DB_PATH || './server/data.sqlite'
 
 const app = express()
 
+// Necessary for Vercel to get the correct user IP for rate limiting
 app.set('trust proxy', true)
 
 app.use(express.json({ limit: '32kb' }))
@@ -25,8 +26,9 @@ app.use(
   }),
 )
 
+// Health check route to verify deployment
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true })
+  res.json({ ok: true, environment: process.env.NODE_ENV || 'development' })
 })
 
 const contactLimiter = rateLimit({
@@ -86,7 +88,12 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
-  console.log(`[rm-services server] listening on http://localhost:${PORT}`)
-})
+// Only start the server listener if we are NOT on Vercel
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`[rm-services server] listening on http://localhost:${PORT}`)
+  })
+}
 
+// Export for Vercel Serverless Functions
+export default app;
